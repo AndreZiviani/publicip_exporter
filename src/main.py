@@ -5,6 +5,7 @@ from prometheus_client import make_wsgi_app, Info
 from flask import Flask
 from waitress import serve
 import dns.resolver
+from ipwhois import IPWhois
 
 app = Flask("PublicIP-Exporter")  # Create flask app
 
@@ -18,6 +19,12 @@ def log(msg):
     print(current_dt.strftime("%d/%m/%Y %H:%M:%S - ") + msg)
 
 
+def get_asn(ip):
+    o = IPWhois(ip)
+
+    return o.ipasn.lookup()
+
+
 def get_ip():
     my_ipv4 = {}
     my_ipv6 = {}
@@ -29,14 +36,18 @@ def get_ip():
 
     try:
         resolver.nameservers = [opendns_v4[0].to_text()]
-        my_ipv4["address"] = resolver.resolve('myip.opendns.com')[0].to_text()
+        address = resolver.resolve('myip.opendns.com', 'A')[0].to_text()
+        my_ipv4 = get_asn(address)
+        my_ipv4["address"] = address
     except dns.exception.Timeout:
         log("ERROR: Timeout querying the IPv4 DNS server")
         my_ipv4["address"] = "<Timeout>"
 
     try:
         resolver.nameservers = [opendns_v6[0].to_text()]
-        my_ipv6["ipv6"] = resolver.resolve('myip.opendns.com')[0].to_text()
+        address = resolver.resolve('myip.opendns.com', 'AAAA')[0].to_text()
+        my_ipv6 = get_asn(address)
+        my_ipv6["address"] = address
     except (dns.exception.Timeout, dns.resolver.NoNameservers):
         log("ERROR: Timeout querying the IPv6 DNS server")
         my_ipv6["address"] = "<Timeout>"
