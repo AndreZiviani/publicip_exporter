@@ -37,7 +37,7 @@ def get_ip():
     try:
         resolver.nameservers = [opendns_v6[0].to_text()]
         my_ipv6["ipv6"] = resolver.resolve('myip.opendns.com')[0].to_text()
-    except dns.exception.Timeout:
+    except (dns.exception.Timeout, dns.resolver.NoNameservers):
         log("ERROR: Timeout querying the IPv6 DNS server")
         my_ipv6["address"] = "<Timeout>"
 
