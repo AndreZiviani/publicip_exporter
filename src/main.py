@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import datetime
 import os
-from prometheus_client import make_wsgi_app, Info
+from prometheus_client import make_wsgi_app, Gauge
 from flask import Flask
 from waitress import serve
 import dns.resolver
@@ -9,9 +9,19 @@ from ipwhois import IPWhois
 
 app = Flask("PublicIP-Exporter")  # Create flask app
 
+labels = {
+    'address': '0.0.0.0',
+    'asn_registry': 'nic',
+    'asn': '000000',
+    'asn_cidr': '0.0.0.0/0',
+    'asn_country_code': '??',
+    'asn_date': 'YYYY-MM-DD',
+    'asn_description': 'ASN Description'
+}
+
 # Create Metrics
-ipv4 = Info('public_ip_v4', 'Public IPv4')
-ipv6 = Info('public_ip_v6', 'Public IPv6')
+ipv4 = Gauge('public_ip_v4', 'Public IPv4', labels.keys())
+ipv6 = Gauge('public_ip_v6', 'Public IPv6', labels.keys())
 
 
 def log(msg):
@@ -41,6 +51,7 @@ def get_ip():
         my_ipv4["address"] = address
     except dns.exception.Timeout:
         log("ERROR: Timeout querying the IPv4 DNS server")
+        my_ipv4 = labels
         my_ipv4["address"] = "<Timeout>"
 
     try:
@@ -50,6 +61,7 @@ def get_ip():
         my_ipv6["address"] = address
     except (dns.exception.Timeout, dns.resolver.NoNameservers):
         log("ERROR: Timeout querying the IPv6 DNS server")
+        my_ipv6 = labels
         my_ipv6["address"] = "<Timeout>"
 
     return my_ipv4, my_ipv6
@@ -58,8 +70,8 @@ def get_ip():
 @app.route("/metrics")
 def updateResults():
     my_ipv4, my_ipv6 = get_ip()
-    ipv4.info(my_ipv4)
-    ipv6.info(my_ipv6)
+    ipv4.labels(**my_ipv4).set(my_ipv4['asn'])
+    ipv6.labels(**my_ipv6).set(my_ipv6['asn'])
     current_dt = datetime.datetime.now()
     print(
         current_dt.strftime("%d/%m/%Y %H:%M:%S - ") +
