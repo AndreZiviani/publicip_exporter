@@ -69,6 +69,9 @@ def get_ip():
 
 @app.route("/metrics")
 def updateResults():
+    # clear old data
+    ipv4.clear()
+    ipv6.clear()
     my_ipv4, my_ipv6 = get_ip()
     ipv4.labels(**my_ipv4).set(my_ipv4['asn'])
     ipv6.labels(**my_ipv6).set(my_ipv6['asn'])
