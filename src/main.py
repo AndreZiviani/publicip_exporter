@@ -39,10 +39,20 @@ def get_ip():
     my_ipv4 = {}
     my_ipv6 = {}
 
-    opendns_v4 = dns.resolver.resolve('resolver1.opendns.com.', 'A')
-    opendns_v6 = dns.resolver.resolve('resolver1.opendns.com.', 'AAAA')
-
     resolver = dns.resolver.Resolver()
+    resolver.timeout = 1.0
+    resolver.lifetime = 1.0
+
+    try:
+        opendns_v4 = resolver.resolve('resolver1.opendns.com.', 'A')
+        opendns_v6 = resolver.resolve('resolver1.opendns.com.', 'AAAA')
+    except dns.exception.Timeout:
+        log("ERROR: Timeout querying OpenDNS server")
+        my_ipv4 = labels
+        my_ipv4["address"] = "<Timeout>"
+        my_ipv6 = labels
+        my_ipv6["address"] = "<Timeout>"
+        return my_ipv4, my_ipv6
 
     try:
         resolver.nameservers = [opendns_v4[0].to_text()]
