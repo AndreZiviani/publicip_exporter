@@ -19,9 +19,14 @@ labels = {
     'asn_description': 'ASN Description'
 }
 
+fail_labels = {'reason': '<Timeout>'}
+
 # Create Metrics
 ipv4 = Gauge('public_ip_v4', 'Public IPv4', labels.keys())
+ipv4_fail = Gauge('public_ip_v4_fail', 'Public IPv4 error', fail_labels.keys())
+
 ipv6 = Gauge('public_ip_v6', 'Public IPv6', labels.keys())
+ipv6_fail = Gauge('public_ip_v6_fail', 'Public IPv6 error', fail_labels.keys())
 
 
 def log(msg):
@@ -37,7 +42,9 @@ def get_asn(ip):
 
 def get_ip():
     my_ipv4 = {}
+    my_ipv4_fail = {}
     my_ipv6 = {}
+    my_ipv6_fail = {}
 
     resolver = dns.resolver.Resolver()
     resolver.timeout = 1.0
@@ -49,10 +56,13 @@ def get_ip():
         address = resolver.resolve('myip.opendns.com', 'A')[0].to_text()
         my_ipv4 = get_asn(address)
         my_ipv4["address"] = address
+        my_ipv4_fail["reason"] = "success"
     except (dns.exception.Timeout, dns.resolver.NoNameservers):
         log("ERROR: Timeout querying the IPv4 DNS server")
         my_ipv4 = labels
         my_ipv4["address"] = "<Timeout>"
+        my_ipv4["asn_description"] = "<Timeout>"
+        my_ipv4_fail["reason"] = "<Timeout>"
 
     try:
         opendns_v6 = resolver.resolve('resolver1.opendns.com.', 'AAAA')
@@ -60,22 +70,39 @@ def get_ip():
         address = resolver.resolve('myip.opendns.com', 'AAAA')[0].to_text()
         my_ipv6 = get_asn(address)
         my_ipv6["address"] = address
+        my_ipv6_fail["reason"] = "success"
     except (dns.exception.Timeout, dns.resolver.NoNameservers):
         log("ERROR: Timeout querying the IPv6 DNS server")
         my_ipv6 = labels
         my_ipv6["address"] = "<Timeout>"
+        my_ipv6["asn_description"] = "<Timeout>"
+        my_ipv6_fail["reason"] = "<Timeout>"
 
-    return my_ipv4, my_ipv6
+    return my_ipv4, my_ipv4_fail, my_ipv6, my_ipv6_fail
 
 
 @app.route("/metrics")
 def updateResults():
     # clear old data
     ipv4.clear()
+    ipv4_fail.clear()
     ipv6.clear()
-    my_ipv4, my_ipv6 = get_ip()
+    ipv6_fail.clear()
+
+    my_ipv4, my_ipv4_fail, my_ipv6, my_ipv6_fail = get_ip()
+
     ipv4.labels(**my_ipv4).set(my_ipv4['asn'])
+    if my_ipv4_fail["reason"] == "success":
+        ipv4_fail.labels(**my_ipv4_fail).set(0)
+    else:
+        ipv4_fail.labels(**my_ipv4_fail).set(1)
+
     ipv6.labels(**my_ipv6).set(my_ipv6['asn'])
+    if my_ipv6_fail["reason"] == "success":
+        ipv6_fail.labels(**my_ipv6_fail).set(0)
+    else:
+        ipv6_fail.labels(**my_ipv6_fail).set(1)
+
     current_dt = datetime.datetime.now()
     print(
         current_dt.strftime("%d/%m/%Y %H:%M:%S - ") +
