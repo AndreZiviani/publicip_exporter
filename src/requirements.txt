@@ -1,4 +1,4 @@
-dnspython==2.0.0
+dnspython==2.2.1
 Flask==2.0.3
 ipwhois==1.2.0
 prometheus_client==0.13.1
