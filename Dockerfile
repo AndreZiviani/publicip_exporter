@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY src/. .
 
-RUN adduser -D app
+RUN adduser -D app && apk add --no-cache git
 RUN pip install -r requirements.txt && \
     rm requirements.txt
 
