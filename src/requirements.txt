@@ -1,5 +1,5 @@
 dnspython==2.2.1
-Flask==2.0.3
+Flask==2.2.1
 git+https://github.com/monoidic/ipwhois@292544f#egg=ipwhois
 prometheus_client==0.13.1
 waitress==2.1.1
