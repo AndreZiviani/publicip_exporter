@@ -1,4 +1,4 @@
-dnspython==2.2.1
+dnspython==2.3.0
 Flask==2.0.3
 git+https://github.com/monoidic/ipwhois@292544f#egg=ipwhois
 prometheus_client==0.13.1
